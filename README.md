@@ -134,7 +134,16 @@ python scripts/merge-batch.py --filepath=./test_data/NJG-extract-all.gzip --batc
 
 ###### Final Datasets ######
 
-To make *final* dataset, i.e. those found in EML `/9-final/`, for a given newspaper we can run:
+To make *final* dataset, i.e. those found in EML `/9-final/`, for a given newspaper we can run the following code from the directory containing the `geolocation` and `wage` output folders. 
+
+In EML, for example, we first move to `4-output`, create the "final" data directory:
+
+```bash
+cd ~/Documents/Newspaper_2023/3_Data_processing/4-output
+mkdir 9-final
+```
+
+Then synthesize the "final" data:
 
 ```python
 import pandas as pd

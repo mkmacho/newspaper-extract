@@ -10,11 +10,14 @@ def main():
     nrows = args.batch_size * args.nbatches if args.nbatches else None
 
     if args.filepath.endswith('.gzip'):
-        sample = pd.read_parquet(args.filepath)
+        sample = pd.read_parquet(args.filepath, columns=args.cols)
         if nrows: sample = sample.iloc[:nrows]
     else:
-        sample = pd.read_csv(args.filepath, nrows=nrows, index_col=[0])
+        sample = pd.read_csv(args.filepath, nrows=nrows, usecols=args.cols, index_col=[0])
     sample.raw_content = sample.raw_content.fillna('')
+
+    if args.skip:
+        sample = sample.iloc[args.skip:]
     print("Loaded template data of {} rows.".format(len(sample)))
 
     newspaper = args.filepath.split('/')[-1].split('-')[0]
@@ -24,7 +27,7 @@ def main():
     nbatches = args.nbatches or (len(sample) // args.batch_size + 1)
     print("Iterating over {} batches.".format(nbatches))
     for batch_idx in range(nbatches):
-        batch = args.batch_size * (batch_idx + 1)
+        batch = args.batch_size * (batch_idx + 1) + args.skip
         file = os.path.join(args.batch_dir, '-'.join([newspaper, args.suffix, 'batch', str(batch)]) + '.gzip')
         if not os.path.isfile(file): 
             print("File not found: '{}'".format(file))
@@ -43,7 +46,7 @@ def main():
 
     if args.delete:
         for batch_idx in range(nbatches):
-            batch = args.batch_size * (batch_idx + 1)
+            batch = args.batch_size * (batch_idx + 1) + args.skip
             file = os.path.join(args.batch_dir, '-'.join([newspaper, args.suffix, 'batch', str(batch)]) + '.gzip')
             if not os.path.isfile(file): 
                 break
@@ -60,7 +63,9 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--nbatches', type=int, default=None, help="Limit size.")
     parser.add_argument('-s', '--suffix', type=str, default='resolve', help="Batches of what.")
     parser.add_argument('-b', '--batch_size', type=int, default=10000, help="Batch size.")
+    parser.add_argument('--cols', action='append', default=None, help="Columns to read from batch.")
     parser.add_argument('-d', '--delete', type=int, default=1, help="Delete batches.")
+    parser.add_argument('--skip', type=int, default=0)
     parser.add_argument('-o', '--output_dir', type=str, help="Filepath to output directory.",
         default="/accounts/projects/pkline/newslabor/Documents/Newspaper_2023/" \
             "3_Data_processing/4-output/")
