@@ -136,27 +136,66 @@ python scripts/merge-batch.py --filepath=./test_data/NJG-extract-all.gzip --batc
 
 To make *final* dataset, i.e. those found in EML `/9-final/`, for a given newspaper we can run the following code from the directory containing the `geolocation` and `wage` output folders. 
 
-In EML, for example, we first move to `4-output`, create the "final" data directory:
+In EML, for example, we first move to `~/4-output`, create the "final" data directory:
 
 ```bash
 cd ~/Documents/Newspaper_2023/3_Data_processing/4-output
 mkdir 9-final
 ```
 
-Then synthesize the "final" data:
+Then synthesize the "final" data as follows:
 
 ```python
 import pandas as pd
+import numpy as np
+
+def best_coordinates(response_list:np.ndarray) -> dict:
+	""" First, we extract only the fields of interest from the Geoapify response data """
+	coordinates = {'latitude':None, 'longitude':None, 'coordinates_confidence':None}
+	best_confidence = -1
+	# For response dict in list of candidate address resolutions
+	for resp_dict in response_list:
+		if resp_dict.get("status_code") != 200: continue
+		# For validated address option
+		for option in resp_dict['content']['features']:
+			if option['properties']['rank']['confidence'] > best_confidence:
+				coordinates['address'] = option['properties']['formatted']
+				coordinates['county'] = option['properties']['county']
+				coordinates['postcode'] = option['properties']['postcode']
+				coordinates['latitude'] = option['properties']['lat']
+				coordinates['longitude'] = option['properties']['lon']
+				coordinates['coordinates_confidence'] = option['properties']['rank']['confidence']
+				best_confidence = option['properties']['rank']['confidence']
+	return coordinates
 
 def merge_final(newspaper:str):
-	df = pd.read_parquet("./7-geolocation/{newspaper}-resolve-all.gzip".format(newspaper=newspaper))
-	wages = pd.read_parquet("./8-employer/{newspaper}-extract-all.gzip".format(newspaper=newspaper))
-	assert len(df) == len(wages)
-	df['wage'] = wages['wage']
-	df.to_parquet("./9-final/{newspaper}.gzip".format(newspaper=newspaper), compression='gzip')
-	df.to_csv("./9-final/{newspaper}.csv".format(newspaper=newspaper))
+	# Get geolocation data (here a minimal version with a `geo_requests` field containing
+	# the full Geoapify response objects)
+	geo = pd.read_parquet(f"./7-geolocation/{newspaper}-request-minimal.gzip")
+	coordinates = geo.apply(lambda row: best_coordinates(row.geo_requests), 
+		axis='columns', result_type='expand')
+	coordinates['id'] = geo['id']
+	del geo 
+
+	# Merge fields of geolocation interest with original data 
+	df = pd.read_csv(f"./6-final-datasets/{newspaper}.csv", index_col=[0]
+	).merge(coordinates, on='id', how='left')
+	assert len(df) == len(coordinates)
+	del coordinates
+
+	# Merge extracted wages
+	final = pd.read_parquet(f"./8-employer/{newspaper}-extract-all.gzip", 
+		columns=['id','wage']
+	).merge(df, on='id', how='left')
+	assert len(final) == len(df)
+	del df 
+
+	# Write to 'final' files
+	df.to_parquet(f"./9-final/{newspaper}.gzip", compression='gzip')
+	df.to_csv(f"./9-final/{newspaper}.csv")
 
 ```
+
 
 ###### Final Statistics ######
 
