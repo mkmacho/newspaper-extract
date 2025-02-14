@@ -110,7 +110,9 @@ Or, again using the `NJG` example data:
 python scripts/resolve.py --filepath=./test_data/NJG-extract-all.gzip  --aux_dir=./auxiliary_files --output_dir=./test_data
 ```
 
-which will output the input dataset plus additional columns `geo_addrs`, `geo_county`, `geo_zip_county`, and (potentially) `geo_requests`. Here below we show an example but with `geo_addrs` renamed `resolved` and `geo_county` renamed `county`: ![pred-resolve](example_images/resolve_geolocation.png)
+which will output the input dataset plus additional columns `geo_addrs`, `geo_county`, `geo_zip_county`, and `geo_requests` which records the full Geoapify response. Here below we show an example but with `geo_addrs` renamed `resolved` and `geo_county` renamed `county`: ![pred-resolve](example_images/resolve_geolocation.png)
+
+Note that the Geoapify response keys can be found and explained [here](https://apidocs.geoapify.com/docs/geocoding/).
 
 
 ### Additional Notes ###
